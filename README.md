@@ -1,1 +1,1 @@
-# django5
+# django5 Theory
