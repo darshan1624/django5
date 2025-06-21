@@ -1,0 +1,64 @@
+Django5 
+- web framework written in python
+- encourgaes rapid development, reusabilty
+- follows MVT architecture
+
+
+Advantages
+- Builtin Admin Interface
+- ORM (dont have to write raw sql query, can connect any type of db
+	postgres, mysql, oracle, mongodb)
+- Authentication System (Inbuilt authentication system)
+- Security
+
+
+Django Project 
+A group of application is called as Django Project.
+e.g.: School Management System(SMS) project may contain
+	registeration App, Fees App, Exam App, Result App 
+
+Command to create django project
+django-admin startproject StudentManagementSystem . 
+// if "." dot is given outer folder wont be created.
+
+File structure in django project
+ - __init__.py 
+	this file creates folder as package in python
+ - wsgi.py  (web server gateway interface)
+	acts as a interface between your project and webserver
+	this describes how web app will communicate with webserver
+ - asgi.py  (asynchonous server gateway interface)
+ - settings.py 
+	all the settings are done here like allowed host, apps used, 
+	middleware, template directory, db connection, timezone, 
+	static folder dir, global varaibles
+ - urls.py 
+	all app urls are metioned here
+ - manage.py 
+	this file is used to run server, create applications
+
+
+ __pycache__ 
+	this folder gets created when you do runserver. This is 
+	created to store cache for faster webpage loading 
+
+Django Application
+Command to create app
+python manage.py startapp app1
+
+File structure in app
+ - migrations 
+	this folder contains all migration files 
+ - admin.py 
+	when we want to show db table in admin panel we reister it here
+ - apps.py 
+ - models.py 
+	models are defined here table structure is created here
+ - tests.py 
+	unit test are written over here
+ - views.py 
+	project business logic is written over here
+
+The app to be detected by django project it need to be mentioned
+in INSTALLED_APPS = ['app1',]
+
