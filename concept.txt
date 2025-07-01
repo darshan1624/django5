@@ -62,3 +62,323 @@ File structure in app
 The app to be detected by django project it need to be mentioned
 in INSTALLED_APPS = ['app1',]
 
+
+How to create function based view (in view.py of django app)
+from django.http import HttpResponse
+def learn_django(request):
+	return HttpResponse("Learn Django")
+
+In urls.py of django project
+path('learn-django/', views.learn_django, name='learndjango')
+
+Can view local web page at url
+http:/127.0.0.1:8000/learn-django
+
+
+How are urls written ? 
+syntax: path('route/', view, kwargs, name)
+ kwargs - it is used to pass any arguments to view
+ name - it is used for url reversion
+
+kwargs e.g.: 
+path('learn-django', views.learn_django, {'status': 'OK'})
+
+def learn_django(request, **kwargs):
+	status = kwargs.get('status')
+	return HttpResponse(f'<h1> Learn Django {status} </h1>')
+
+// You can metion urls of apps directly in django project where 
+ settings.py when its a small project. 
+ But when you have mutiple apps its best practice to keeps urls 
+ separated and mention in the app itself. So, that this app can be 
+ used easily in some another project (hint: sms, teacherManagetSystem)
+
+How to metion different url in app itself?
+ (same as we do directly in project urls)
+ path('learn-django', views.learn_django, {'status': 'OK'})
+ 
+ For it to work we also need to metion it in project urls.
+ from django.urls import path, include
+ path('app1/', include('app1.urls'))
+
+url - http:/127.0.0.1:8000/app1/learn-django
+
+
+How are templates created?
+Inside app create teamplates folder and inside teamplates create 
+folder with app named again, inside this app folder u can create
+.html files.
+	app name= course
+	course>templates>course>django.html, fastapi.html
+
+How to render template?
+In views.py
+from django.shortcuts import render
+
+def learn_django(request):
+	return render(request, 'course/django.html')
+
+
+Django Template Language:
+How to create dynamic template?
+- variables
+In views.py
+	def learn_django(request):
+		coursename = {'cname':'Dajango', 'version':5.0}
+		return render(request, 'course/django.html', coursename)
+
+In django.html
+<body> <h1> This is a {{cname}} course using {{verison}} version.
+	</h1></body>
+
+- filters
+dj template provides in built filters on text in HTML.
+
+<body> 
+    <h2> Name: {{name|upper}}</h2>    amit: AMIT
+    <h2> desc: {{desc|truncatewords:4}} </h2>  This is template code ... 
+
+Multiple pipe filters
+    <h2> desc: {{desc|upper|truncatewords:3}} </h2>
+</body>
+
+other filters: 
+ lower, capfirst, default:'nothing', length, slice, truncatechars:2, 
+ floatformat:2
+
+
+- conditions (if, elif, else, endif)
+ context = {'nm' : 'Amit'}
+    <h2> If Tag </h2>
+	{% if nm %}		
+	  <h3> Name: {{nm}} </h3>
+	{% endif %}
+
+ Boolean (and, or, not)
+ context = {'nm' : 'Amit', 'st': 108}
+   	{% if nm and st %}
+		<h3> Name: {{nm}}, Seat: {{st}} </h3>
+	{% endif %}
+ Operators
+ 	{% if nm == 'Mumbai' and st > 100 %}
+		<h3> Seats Full </h3>
+	{% elif nm == 'Mumbai' and st > 50 %}
+		<h3> Seats Half Full </h3>
+	{% else %}
+		<h3> Seats available </h3>
+	{% endif %}
+	
+ filter
+	{% if nm|length >= 4 %}
+		<h3> {{nm}} </h3>
+	{% endif %}		
+
+- loops
+ context = {'names': ['Amit', 'Anket', 'Oliva', 'Sanket']}
+ {% for name in names %}
+	<li> {{name}} </li>
+ {% endfor %}
+ reversed list of names
+ {% for name in names reversed %}
+	<li> {{name}} </li>
+ {% endfor %}
+
+
+How to access elemnts in nested dict in templates?
+stu = {
+		'stu1': {'name': 'amit', 'roll': '101'},
+		'stu2': {'name': 'anket', 'roll': '102'},
+		'stu3': {'name': 'oliva', 'roll': '103'},
+		'stu4': {'name': 'sanket', 'roll': '104'},
+	}
+students = {'student': stu}
+context = students 
+<h2> {{student}} </h2> ==> entire stu dict is printed
+<h2> {{student.stu1}} </h2> ==> 1st dict is printed
+<h2> {{student.stu1.name}} </h2> ==> 'amit' name is printed 
+
+
+context = {'stu1': {'name': 'amit', 'roll': '101'}}
+{% for key, value in student.items %}
+	{{key}} - {{value}} <br/>
+{% endfor %}
+
+
+How to store static files?
+(css, javascript)
+To include static files in app, create 
+	static>app_name>css> style.css
+			>js> script.js
+			>images> img.jpeg
+
+when including css, js in html file, you need to load static file first.
+{% load static %}
+<html >
+<head> 
+    <link rel='stylesheet' href = "{% static 'app_name/css/style.css'%}">
+    <script src="{% static 'app_name/js/script.js'%}"> </script>
+
+</html>
+
+
+Template Inheritance:
+Rather that creating same components like nav, footer in every webpage
+we can create it in single .html file and inherit that code in other
+.html files.
+
+base.html 
+suppose base.html file has all the required components. 
+and I want same implemented in home.html
+home.html
+{% extends 'app_name/base.html' %}
+
+Now suppose base.html has <title> </title> tag which is needed in both
+home.html as 'Home Page' and in about.html as 'About Page'.
+
+so, to make it dynamic we provide that specfic input from home.html, 
+about.html.
+
+base.html
+	..
+	<title> {% block title %}  
+		{% endblock %}
+	</title> 
+	..
+
+home.html 
+{% extends 'app_name/base.html' %}
+{% block title %}  
+	Home Page
+{% endblock %}
+
+Similar to title we can have other content diff for diff pages.
+
+
+How to apply css/js/images when implemented template inheritance for
+specific pages?
+style.css
+	body {
+		background-color: gray;
+	} 
+	h1 {
+		color:green;
+	}
+
+base.html
+{% block css %} 
+    <link rel='stylesheet' href = "{% static 'app_name/css/style.css'%}">
+{% endblock css %} 
+	##applying this way it gives default style value to every 
+	page
+	##if diff is required in some page then can implement this 
+	block css.
+
+
+Hyperlink:
+Without hyper link we have to hardcode like below
+urls.py
+	path('core/', include('core.urls')), 
+	path('course/', include('course.urls'))
+
+	inside core app urls.py 
+	path('home/', views.home)
+	path('about/', views.about)
+
+base.html	
+<ul>
+	<li> <a href='/core/home'> </a> <li> 
+	<li> <a href='/core/about'> </a> <li>
+	<li> <a href='/course/django'> </a> <li>
+</ul>
+
+Using hyperlink
+	path('home/', views.home, name='home')
+	path('about/', views.about, name='about')
+
+<ul>
+	<li> <a href="{% url 'home'%}">Home</li>
+	<li> <a href="{% url 'about'%}">About</li>
+	<li> <a href="{% url 'django'%}">Django</li>
+</ul>
+
+Just like extends in ineritance we can use include to include 
+templates inside another template.
+e.g.:
+templates/app_name/components/navbar.html
+
+base.html
+<body>
+{% include 'core/components/navbar.html' %}
+{% block content%} {% endblock content %}
+{% block footer%} {% endblock footer %}
+</body>
+	
+
+
+
+
+Object Relational Mapper(ORM):
+ORM allows communication between application and database.
+Benefits: 
+	- You dont need to know sql, oracle, mysql, sqllite to
+		 create databse and perform query
+	- Can switch to diff db anytime e.g.: from sql, postgres 
+
+
+model - It is a structure of the table in db.
+How to create model?
+from django.db import models
+class Profile(models.Model):
+	name = models.CharField(max_length=200)
+	email = models.EmailField(max_length=200)
+	city = models.CharField(max_length=200)
+	roll = models.IntegerFied()
+
+migrations - Indetify any change in model and create file for it.
+	- we can say, it creates SQL statement to create table.
+
+migrate - It excutes those migratetion files to create table in db.
+
+> python manage.py makemigrations
+> python manage.py migrate 
+
+
+The table that will be created in db will have by default this name
+> appname_modelname
+e.g.: if app_name = student, model_name = Profile
+then, table_name = student_profile 
+
+
+To view migration files for entire project excute
+> python manage.py showmigrations
+
+To view sql command generated in migration file after running 
+makemigrations excute
+> python manage.py sqlmigrate student 0001
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
