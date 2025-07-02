@@ -8,4 +8,10 @@ class Registeration(forms.Form):
     key = forms.CharField(widget=forms.HiddenInput())
 
 
+class LoginUser(forms.Form):
+    username = forms.CharField()
+    email = forms.EmailField()
+    password = forms.CharField(widget=forms.PasswordInput())
+
+
 
