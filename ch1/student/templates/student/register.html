@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+<body>
+    <h1>Registeration</h1>
+    {% comment %} <table>
+        {{fm}}
+    </table> {% endcomment %}
+
+    {% comment %} <form action="">
+        {{fm.first_name.label_tag}} {{fm.first_name}}
+        {{fm.email.label_tag}} {{fm.email}}
+    </form> {% endcomment %}
+    
+    {% comment %} <form action="">
+        <label for="{{fm.first_name.id_for_label}}"> First Name </label>{{fm.first_name}}
+        <label for = {{fm.email.id_for_label}}> {{fm.email.label}} </label>{{fm.email}} 
+    </form> {% endcomment %}
+
+    <form action="">
+        {% for field in fm.visible_fields %}
+        <label for="{{field.id_for_label}}">{{field.label}}</label>
+        {{field}}
+        </br>
+        {% endfor %}
+
+        {% for field in fm.hidden_fields %}
+        {% comment %} <label for="{{field.id_for_label}}">{{field.label}}</label> {% endcomment %}
+        {{field}}
+        </br>
+        {% endfor %}
+
+    </form>
+
+
+
+</body>
+</html>

@@ -452,13 +452,173 @@ Customize form class object
 	provides only input field for first_name and no other tags
 	(no label) or any field
 
-
-form class Registeration take field default value as parameter.
+Initial(Default Value):
+form class Registeration can take field intital value as parameter.
 e.g.: 	form = Registeration(intial= {'email': 'amit@gmail.com'})
 	The input will be amit@gmail.com for input field by default.
 
+Can also be acheived by writing form class itself.
+class Registeration(forms.Form):
+	first_name = forms.CharField(intial='Amit')
+
+
 form fields can be ordered
 e.g.: form = Registeration(field_order=['email', 'city'])
+
+
+
+Above method works using {{form}}, but following method allows more 
+customisation, writing fields individually.
+differnent ways
+	- form.first_name
+	- form.first_name.name
+	- form.first_name.label_tag
+	- form.first_name.label
+	- form.first_name.id_for_label	
+	- form.first_name.value|default=''
+
+Get label and input field:
+<form>
+	{{form.first_name.label_tag}} {{form.first_name}} </br>
+	{{from.last_name.label_tag}} {{form.last_name}}
+</form>
+
+ == > HTML code generated
+	<label for="id_first_name">First name:</label>
+	<input type="text" name="first_name" required="" id="id_first_name">
+
+
+# can also use <label for="id_first_name">First name:</label>
+# but id had to be provided correctly in for, which can be done 
+in following way.
+<label for = "{{form.first_name.id_for_label}}"> First Name</label>
+{{form.first_name}}
+
+# "First Name" text for label can also be replaced with .label but 
+# it doesnt provide label tag.
+{{form.first_name.label}} 
+
+
+Now above we have seen example for how to create lablel and input
+field for first_name. similarly, we have to do for other fields. 
+This can be done using for loop.
+<form>
+  {% for field in form%}
+    <label for = "{{field.id_for_label}}"> {{field.label}}</label>
+    <input type='{{field.field.widget.input_type}}' 
+	name='{{field.name}}' required id ="{{field.id_for_label}}">
+  {% endform %}
+<form>
+
+
+Now in case of hidden inputs, u have to write two for loops.
+hidden inputs - not visible on UI but when submited send some value to
+	backend.
+	<input type="hidden" name="key" value="some_value">
+
+How to create hidden fields in form?
+class Login(forms.Form):
+	email = forms.EmailField()
+	password = forms.CharField()
+	key = forms.CharField(widget=forms.HiddenInput())
+
+perform two loops to show visible_fields, and hide hidden_fields.
+{% for field in form.visible_fields %}
+	here u will show both label and input field
+	# wont include Key
+{% for field in form.hidden_fields %}
+	here only show input field
+	# will incldue Key
+
+
+Different fields, arguments, widgets in form class:
+widgets - They are argument but used to control how the form fields
+	look and behaves in the browser.
+	widgets change the type of field <input type] =''> 
+	widgets add placeholder, class
+
+class DemoForm(forms.Form):
+	name = forms.CharField( label='Full Name', 
+		max_length=100, 
+		intial = 'Amit', 
+		validators = [MinLengthValidator(3)]
+			# length must be greater than 3 chars
+		widget = forms.TextInput(
+			 attrs={'placeholder': 'Type here'},
+			 'class': 'mycss')
+	)
+
+	email = forms.EmailField(
+		disabled = True # cant enter any email here
+	)
+
+	pin_code = forms.IntegerField(
+		label = 'Pin Code'
+		min_value = 1000
+		max_value = 9999	
+	)
+
+	age = forms.FloatField()
+	dob = forms.DateField(
+		required = False 	
+	)
+	is_subscribed = forms.BooleanField()
+	
+	phone_no = forms.RegexField(regex=r'^\+?1?\d{9,15}$')
+	password = forms.CharField(widget=forms.PasswordInput())
+	slug = forms.SlugField()
+	rating = forms.DecimalField()
+
+
+
+
+Request, Repsonse in form:
+How to get data in backedn when form is submitted? 
+steps to follow in views.py 
+	- validate data 
+	- get clean data 
+
+Wrong way to get data from request
+def register(request): 
+	if request.method == 'POST':
+		name = request.POST['name']
+		email = request.POST['email']
+		password = request.POST['password']
+
+Correct way according to dajngo
+	- first validate using .is_valid() then get clean data
+
+def register(request):
+	if request.method == 'POST':
+	    form = Registeration(request.POST)
+	    if form.is_valid():
+		name = form.cleaned_data['name']
+		email = form.cleaned_data['email']
+		password = form.cleaned_data['password']
+	    else:
+		form = Registeration()
+	return render(request, 'student/register.html', {'form': form})
+	
+	## cleaned_data is a dictionary.
+	## cleaned_data = {'name': 'Amit', 'email':'abcd@g.com', 
+			'password':'123456'}
+
+Now if you go on web and refresh page, it will resubmit the form 
+details. To avoid django say redirect user to some other html page
+or same page.
+	from django.https import HttpResponseRedirect
+	return HttpResponseRedirect('student/success')
+
+
+		
+
+
+
+
+
+
+
+
 
 
 
