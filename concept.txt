@@ -358,6 +358,117 @@ makemigrations excute
 
 
 
+Admin Interface: 
+http://127.0.0.1:8000/admin
+
+> python manage.py createsuperuser
+
+
+How to register a model in admin.py?
+In admin.py
+from student.models import Profile
+admin.site.register(Profile)
+
+How to view actual name in admin.py when clicked on model in admin.py
+use __str__
+
+class profile(models.Model):
+	..
+
+	def __str__(self):
+		return self.name
+
+#### cannot return int attribute like roll. always return str.
+
+
+How to view more than one column from db in admin.py?
+In admin.py 
+from student.models import Profile
+class ProfileAdmin(admin.ModelAdmin):
+	list_display = ['name', 'roll']
+
+admin.site.register(Profile, ProfileAdmin)
+
+
+
+
+Django Forms:
+These are normal froms like register forms, etc.
+You can create forms in two ways
+- using django form api 
+- modelforms
+
+How to create form? 
+create a forms.py file in app.
+In forms.py
+	
+from django import forms
+class Registration(forms.Form):
+	first_name = forms.CharField()
+	last_name = forms.CharField()
+	email = forms.EmailField()
+	city = forms.CharField()
+
+#You dont need to provide here max_length, still it works.
+
+Now inside views.py import Registration form and pass the object to
+dyanmic template.
+
+In views.py
+from student.forms import Registration
+def register(request):
+	form = Registeration()
+	return render(request, 'student/register.html', 
+				context = {'fm':form})
+
+In register.html
+<body> 
+<h1>
+	<form> {{fm}} <form>
+</h1>
+</body>  
+
+# This creates a from for you. 
+ -  By this method you only get lable tag and input tags both 
+    inside div.
+ - Such multiple div are formed for each input field.
+ - form tag and button is not provided.Create on your own.
+	<form action=""> {{form}} 
+		<input type="sumbit" value="Submit"> 
+	<form>
+ - field type CharField, EmailField becomes your input type 
+	<input type='email'> in form.
+
+Customize form class object
+ - form.as_table 
+	provides tr, th tags instead of div
+	can use <table> manually which usally includes tr, th 
+	{{form.as_table}}
+ - form.as_ul
+	provides <ul> and <li> instead of div
+ - form.as_p
+	provides <p> tag instead of div 
+ - form.first_name
+	provides only input field for first_name and no other tags
+	(no label) or any field
+
+
+form class Registeration take field default value as parameter.
+e.g.: 	form = Registeration(intial= {'email': 'amit@gmail.com'})
+	The input will be amit@gmail.com for input field by default.
+
+form fields can be ordered
+e.g.: form = Registeration(field_order=['email', 'city'])
+
+
+
+
+
+
+
+
+
+
 
 
 
