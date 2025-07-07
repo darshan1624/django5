@@ -1,3 +1,24 @@
+django, benefits
+django proj, app, file structure
+view, urls
+create templates, render template, variabes, filters, conditons, loops
+create static files, how to laod static files in template
+template inheritance extends, load static in invidual inherited child template
+Hyperlink name url
+include template
+ORM
+admin interface
+How to create forms, include form in template, 
+customize form at field level (for loop, visible_fields, hidden_fields)
+diff fields in form class and their arguements, widget
+POST request in form
+validations in form (field, object, validators)
+customise form field errors
+ModelForm
+Dynamic URL
+
+
+
 Django5 
 - web framework written in python
 - encourgaes rapid development, reusabilty
@@ -409,8 +430,6 @@ class Registration(forms.Form):
 	email = forms.EmailField()
 	city = forms.CharField()
 
-#You dont need to provide here max_length, still it works.
-
 Now inside views.py import Registration form and pass the object to
 dyanmic template.
 
@@ -574,6 +593,14 @@ class DemoForm(forms.Form):
 
 Request, Repsonse in form:
 How to get data in backedn when form is submitted? 
+
+login.html
+<form action="" method='POST'>
+	{% csrf_token %}
+	{{fm.as_p}}
+	<input type='submit'>
+<form>
+
 steps to follow in views.py 
 	- validate data 
 	- get clean data 
@@ -608,6 +635,260 @@ details. To avoid django say redirect user to some other html page
 or same page.
 	from django.https import HttpResponseRedirect
 	return HttpResponseRedirect('student/success')
+
+- novalidate 
+    Html validation wont happen. e.g.: this field is required prompts.
+    But then django form validation will still work, while submitting.
+If <form action="" method="POST" novalidate>
+
+
+
+
+Validations in Forms:
+- field level validation
+- object level validation
+- validators 
+
+field level validation
+- peformed on single field. 
+- Must return a value or raise forms.ValidationError.
+
+syntax: def validate_fieldname(self)
+class Login(forms.Form):
+	username = forms.CharField(label='Username', initial = 'abcd', 
+			max_length=200)
+	email = forms.EmailField()
+	password = form.CharFiled(widget=forms.PasswordInput())
+	
+	def validate_username(self):
+       	    username = self.cleaned_data['username']
+	    if len(username) < 4:
+	        raise forms.ValdiationError('Enter chars more than 4')
+	    return username
+
+
+object level validation
+- peformed when we want to validate on mutliple fields
+- must return a cleaned_data, with errors if present.
+
+synatx: clean(self)
+
+def clean(self):
+		
+	username = self.cleaned_data['username']
+	email = self.cleaned_data['email']
+		
+	if len(username) < 4:
+		self.add_error('username', 'Enter more than 4 char.')
+	if len(username) < 4:
+		self.add_error('username', 'Enter more than 4 char.')
+		
+	return self.cleaned_data
+
+
+validators
+- Can create custom validators for field.
+
+def start_with_s(value):
+	if value[0] != 's':
+	    raise forms.ValidationError('Email should start with s')
+
+class Login(forms.Form):
+	username = forms.CharField(validators=[start_with_s])
+
+#The error is returned to web, since we will return
+Login(request.POST) which validates the data.
+
+
+
+Errors in forms:
+- In class Login form you can modify the error message.
+e.g.:
+	name = forms.CharField(error_message={'required': 'Name is 
+		required'})
+	# orginally it says "This field is required"
+
+- When we use for loop in template to show form fields, the error tag
+ gets removed. so, we need to mention it.
+	
+	{% for field in form %}
+		{{field.label_tag}} {{field}} {{field.errors}}
+	{% endfor %} 
+
+
+How to post, update, delete data in db?
+from student.views import Profile
+
+if request.method == 'POST':
+    form = Login(request.POST)
+	if form.is_valid():
+		username = form.cleaned_data['username']
+		email = form.cleaned_data['email']
+		password = form.cleaned_data['password']
+		stu = Student.objects.create(username = username,
+			email=email, password = password)
+		stu.save()
+		
+similarly, for request.method == 'PUT'
+stu = Student.objects.update(id=1, username = username,
+	email=email, password = password)
+stu.save()
+
+for request.method == 'DELETE'
+stu = Student.objects.get(id=1).delete()
+
+
+
+- ModelForm
+	The ModelForm provides u a shortcut that lets u automatically 
+ form class with fields that correspond to model fields.
+
+ # Few fields in model are irrelavant to form class.
+ like for e.g. Autofield in model wont have any meaning i form.
+ # if blank =True in charfield for name in model, then its set as
+ not required in form.
+
+class Registeration(forms.ModelForm):
+	class Meta:
+		model = Profile
+		fields = ['name', 'email', 'password']
+		labels = {'name':'Enter Name', 'email':'Enter Email'}
+
+	# can also use fields, exclude.
+
+
+
+Dynamic URL:
+from student import views
+path('profile/<int:id>', views.profile, name='profile')
+path('profile/<slug:id>', views.profile, name='profile')
+path('profile/<str:id>', views.profile, name='profile')
+
+#slug - its a url with small chars, -, number. 
+	e.g.: http://127.0.0.1:8000/10-django-rules
+
+
+
+Admin Panel:
+Admnin Panel contains Authentication and Authorization application by
+default which contains two models
+- Groups
+- Users
+
+Using Users you can 
+ change the username, password, 
+ add first, last name and email address
+ can change type of user 
+ can assign group to user
+ can give CRUD permission of each model created to user 
+ can view last login, date joined
+
+Using Groups
+ You can create group and name it. 
+ Group contains multiple permissions 
+
+Types of Users:
+- Active User (tells the user exists with particular username, instead
+		of deleteing make inactive)
+- is_staff User (Can login Admin Panel, but cant view anything if no
+		permissions given)
+- is_superuser (has all the permissions)
+
+
+
+##############PROJECT: Ch42
+Frontend Code
+#############################
+Utilities:
+Home 
+Registeration form 
+email activation 
+login 
+ - customer dashboard 
+ - seller dashboard
+
+change, reset password 
+Logout 
+
+
+Tailwind css
+# use any frontend lang you want.
+
+
+Project structure 
+apps
+- account 
+- customer
+- seller 
+
+account> templates 
+- base.html
+	nav bar 
+	url for home, Register, login buttons 
+	If user logged in show Dashboard, Logout buttons 
+- home.html
+- register.html
+- login.html
+- password_reset.html
+- password_reset_confirm.html
+- activation_email.html
+Views: 
+- home 
+- login
+- register
+- password_reset_view
+- password_reset_confirm_view
+
+
+customer> templates
+- dashboard.html
+- password_change.html
+Views:
+- customer_dashboard_view
+- password_change_view
+
+seller>templates 
+dashboard.html 
+Views:
+seller_dashboard_view
+
+#############################
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	
+
+	
+
+
 
 
 		

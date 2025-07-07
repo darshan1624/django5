@@ -17,7 +17,7 @@ def login(request):
             username = form.cleaned_data['username']
             email = form.cleaned_data['email']
             password = form.cleaned_data['password']
-        return HttpResponseRedirect('/student/login')
-
-    form = LoginUser()
+            return HttpResponseRedirect('/student/login')
+    else: 
+        form = LoginUser()
     return render(request, 'student/login.html', context= {'fm': form})
