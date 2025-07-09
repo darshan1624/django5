@@ -854,6 +854,165 @@ seller_dashboard_view
 
 #############################
 
+Custom User Model:
+
+account> models.py 
+
+# Whenever using custom user table you have decide this very early 
+# during developement. 
+# You shouldnot swicth between admin panel to custom between development. 
+
+- To create custom user model inherit AbstractBaseUser Model.
+
+from django.contrib.auth.models import AbsractBaseUser
+
+Class User(AbstactBaseUser):
+	email = models.EmailField(max_length = 255, unique = True)
+	name = models.CharField(max_length=255)
+	city = models.CharField(max_length=255)
+	is_active = models.BooleanField(dafault=False)
+	is_staff = models.BooleanField(dafault=False)
+	is_superuser = models.BooleanField(dafault=False) 
+	is_customer = models.BooleanField(dafault=False)
+	is_seller = models.BooleanField(dafault=False)
+	created_at = models.DateTimeField(auto_now_add=True) # is set only once
+	updated_at = models.DateTimeField(auto_now=True) # updated every time u make changes to that model object
+	
+# By default admin panel takes username, password. 
+# But we want email instead of username
+	USERNAME_FIELD = 'email'
+
+# This class User must be used while executing createsuperuser
+	objects = UserManger() 
+
+
+Permission Tables: 
+ Whenever we do makemigrations, migrate for first time following 
+ tables are created
+- content_type
+- auth_permission
+- auth_user_user_permissions
+- auth_group_permissions
+- auth_user_groups
+
+- content_type 
+ It stores a app-model mapping for every installed app.
+ e.g.: suppose app "store" has "Product" model.
+	id	app_label	 model
+	5 	store   	Product  
+
+- auth_permission
+ whenever a model is created and makemigrations, migrate is done.
+ 4 permissions are created for each new model. 
+	e.g.: model product
+	app_name.add_product, . change_product, 
+	.delete_product, .view_product 
+ These permissions are linked to models defined in content_type using
+ forign key content_type_id. 
+ e.g.:
+	id 	content_type_id    codename 		name
+	20	5		   add_product      Can add Product		
+	21	5		   change_product      Can change Product
+	22	5		   delete_product      Can delete Product
+	23	5		   view_product      Can view Product		    
+
+- auth_user_user_permissions
+	These permissions are assigned manually.
+	columns : (id user_id permission_id)
+
+- auth_group 
+	columns : (id name)
+
+- auth_user_groups
+	columns : (id user_id group_id)
+
+
+
+Django's built-in authentication and permission system uses the 
+following methods on the user model
+- has_perm(perm, obj=None)
+- has_perms(perm_list, obj=None)
+- has_module_perms(app_label)
+
+	def has_perm(self, perm, obj=None):
+		return self.is_superuser
+
+	def has_module_perms(self, app_label):
+		return self.is_superuser
+# gives permission only if the user is_superuser
+
+They are used in Django admin, views, templates	to check if the user
+has specfic permissions.
+e.g.: 
+In views.py (In delete request.method == 'DELETE')
+	if not request.user.has_perm('app_name.delete_product'):
+		return HttpResponse('You dont have delete permssions')
+
+	#'app_name.delete_product' is a auth_permission.
+
+Internal working of has_perm()
+ - It breaks 'app_name.delete_product' into app_label and codename
+ i.e. app_name, delete_product. It looks for
+ permission_id with that app_label, codename in auth_permission table.
+ - Then checks if user has that permission_id in auth_user_user_permissions
+ table.
+ #In above implementation we have overwridden and only checking if 
+ is_superuser.
+ 
+
+has_module_perms('store') will look for if the user has access to
+particular app using tables auth_user_user_permissions, 
+auth_permission, content_type.
+
+
+Custom Manager:
+- You need to define custom manager class to handle custome user 
+model.
+- BaseUserManger class provides the logic to create superuser and 
+regular users. 
+- BaseUserManger has implementaion for create_user() and 
+create_superuser()
+- without defining this class for custom user model (taking email
+instead of username) will fail running createsuperuser.
+
+from django.contrib.auth.models import BaseUserManger
+
+class UserManger(BaseUserManager):
+    def create_user(self, email, password=None):
+	if not email:
+	    raise ValueError('User must have an valid email')
+	user = self.model(email=self.normalize_email(email))
+	user.set_password(password)
+	user.save()
+	return user
+- self.model() is same as saying User(). self.model refers to the 
+ model where this class UserManager() object is created that is User
+ class.
+
+# self.normalize will make capital email to small letters.
+# used .set_password insetad of .password as it encrypts passsword.
+
+    def create_superuser(self,email,password=None):
+	user = self.create_user(email, password)
+	user.is_staff = True
+	user.is_superuser = True
+	user.is_customer = True
+	user.is_seller = True
+	user.save()
+	return user
+
+
+How to configure cutsom user model in settings.py?
+	AUTH_USER_MODEL = 'account.User'
+If not specified it will use defualt buitlin User Model.
+
+
+
+
+
+		
+
+
 
 
 
