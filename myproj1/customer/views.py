@@ -3,9 +3,10 @@ from django.contrib.auth.forms import PasswordChangeForm
 from django.contrib import messages
 from django.contrib.auth import logout
 from django.contrib.auth.decorators import login_required
+from account.decorators import outer_decorator_require_roles
 
 
-@login_required
+@outer_decorator_require_roles('customer')
 def customer_dashboard_view(request):
     return render(request, 'customer/dashboard.html')
 

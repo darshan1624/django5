@@ -419,6 +419,12 @@ You can create forms in two ways
 - using django form api 
 - modelforms
 
+Benefits of django forms? 
+- Django Forms automatically validate fields. e.g. max_length, 
+field required.
+- Can add custom validations
+- forms encapsulate logic, so views remain clean.
+
 How to create form? 
 create a forms.py file in app.
 In forms.py
@@ -1007,10 +1013,292 @@ How to configure cutsom user model in settings.py?
 If not specified it will use defualt buitlin User Model.
 
 
+python manage.py createsuperuser will call create_superuser() function.
+
+------------------------------------------------------------
+## Now we want to register a new user using registeration from.
+For thate we have 
+account> templates> register.html  
+
+How to create dajngo registeration form in backend? 
+from django import forms
+
+class RegisterationForm(forms.ModelForm):
+    password = forms.CharField(widget=forms.PasswordInput)
+    confirmPassword = forms.CharField(widget=forms.PasswordInput)
+	class Meta:
+	    model = User
+	    fields = ['email', 'name', 'password', confirmPassword]
+
+	
+	def clean(self):
+	    password = self.cleaned_data['password']
+	    confirmPassword = self.cleaned_data['password']
+	    if password != confirmPassword:
+		self.add_error('Password didnt match')
+	    return self.cleaned_data
+	
+	def clean_email(self):
+	    email = self.cleaned_data['email']
+	    if User.objects.get(email=email).exists():
+		raise forms.ValidationError('Email exists')
+	    return email
+
+How to handle register form post request in views?
+
+def register(request):
+    if request.method == 'POST':
+	form =  RegisterationForm(request.POST)
+	if form.is_valid():
+	    user = form.save(commit=False)
+	    user.set_password(forms.cleaned_data['password'])
+	    user.is_active = False
+	    user.save()
+	    redirect('login')
+    else:
+    	form = RegisterationForm()
+    return render(request, 'account/register.html', {'form':form})
+
+-----------------------------------------------------------------
+
+Now how to login to access website features?
+
+# Here we are not creating django form for login.
+# We will handle things like validation in views.
+
+from django.contrib.auth import authenticate, login
+
+def login_view(request):
+    if request.method == 'POST':
+	email = request.POST.get('email')
+	password = request.POST.get('password')
+    	if not email or not password:
+	    # can use here messages framework
+	    return redirect('login')	
+        try:
+	    user = User.objects.get(email=email)
+        except : 
+	    return redirect('login')
+	
+        if not user.is_active:
+	    return redirect('login')
+        
+        user = authenticate(request, email=email, password=password)
+	if user:
+	    login(request, user)
+	    if user.is_seller:
+		return redirect('seller_dashboard')
+	    elif user.is_customer:
+		return redirect('customer_dashboard')
+	    else:
+		return redirect('home')  
+	else:
+	    return redirect('login')  
+
+    if request.user.is_authenticated:
+	if request.user.is_seller:
+	    redirect('seller_dashboard')
+	elif request.user.is_customer:
+	    redirect('customer_dashboard')
+	else:
+	    reidirect('home')
+	
+
+- authenticate()
+- login()
+
+authenticate():
+authenticate is built in function.
+It check if user with given username exists, password is correct
+using .check_password() internally.
+And return User model object.
+
+login():
+without login() the user wont stay logged in.
+It stores the userid in session.
+So, you can access request.user in any view once logged in.
+This also allow us to check 
+	if request.user.is_authenticated
+
+
+How to Logout user?
+from django.contrib.auth import login, authenticate, logout
+
+def logout_view(request):
+    logout(request)
+    return redirect('login')
+
+
+Problems: 
+problem 1: 
+#Login Form will only open if you hit login end point 'login/'
+#So, User can try to access url directly without login like 
+	http://127.0.0.1:8000/customer/dashboard
+- to avoid this we use decorator @login_required
+from django.contrib.auth.decorators import login_required
+
+@login_required
+def customer_dashboard_view(request):
+    return render(request, 'customer/dashboard.html')
+
+# if user didnt login it will show error to avoid this do below 
+setting to redirect user to login page.
+In settings.py
+LOGIN_URL = 'login'
+
+----------------------------------------------------------------
+Things can do further: 
+	Implement email using smtp to activate user
+	send email to reset password
+----------------------------------------------------------------
+
+
+Problem 2:
+Even after using @login_required decorator customer can view seller
+dashboard and seller can see customers dashbooard. 
+How to restrict role based view?
+- This can be done creating cutsomized decorator.
+
+########
+- decorator
+ It is a function that takes function as an argument and returns 
+ warpper function.
+ We use @function_name to specify a decorator to be applied on another
+ function. 
+ e.g.:
+
+def decorator(num):
+    def wrapper():
+	x = num()
+	return x*5
+    return new_num
+
+def num():          
+    return 10
+
+new_num = decorator(num)
+new_num() ==> 50 
+
+
+# Using @ for decorator
+@decorator
+def num():
+    return 10
+
+num() == >50 
+
+
+#How to pass arguments in x= num(), if main function takes arguments 
+def num(value)?
+
+def decorator(num):
+    def wrapper(*args, **kwargs):
+	x = num(*args, **kwargs)
+	return x*5
+    return new_num
+
+@decorator
+def num(value):          
+    return value
+
+num(10) ==> 50
+
+- *args
+	takes func(10,20,30,40) any number of arguments 
+- **kwargs
+	takes func(name='Alice', age=25) takes named arguments
+
+
+#How to pass arguments to decorator? e.g.: to variablize 5 in 
+expression x*5
+- Will have to create on more outer function to decorator
+
+def outer_argument_decorator(multiplier):
+    def decorator(num):
+	def wrapper(*args, **kwars):
+	    x = num(*args, **kwargs)
+	    return x * multiplier
+	return new_num
+    return decorator
+
+@outer_argument_decorator(multiplier=5)
+def num(value):          
+    return value
+
+- @wraps(func)
+	It is a decorator Used inside a decorator for wrapper function
+	This preserves main function meta data like func.__name__, 
+	func.__doc__ 
+	Why meta data is reuired? 
+	- It is used by django for url routing, if not used @wrap
+	dajngo will consider wrapper as orinal function name 
+	- If error caught in view (in funtion), it will give error
+	inside wrapper and not actual funtion name.
+
+def outer_argument_decorator(multiplier):
+    def decorator(num):
+	@wrap(num)
+	def warpper(*args, **kwars):
+	    x = num(*args, **kwargs)
+	    return x * multiplier
+	return new_num
+    return decorator
+
+
+########
+
+# How to create Custom decorator to restrict role?
+
+core app> decorators.py 
+
+from django.contrib.auth.decorators import login_required
+from functools import wraps
+from django.http import HttpResponse
+
+def login_and_role_required(required_role):
+    def decorator(func):
+        @wraps(func)
+	@login_required
+    	def wrapper(request, *args, **kwargs):
+            user = request.user
+      	    if required_role == "customer" and not user.is_customer:
+                return HttpResponse('User must be customer')
+      	    if required_role == "seller" and not user.is_seller:
+                return HttpResponse('User must be seller')
+	return func(request, *args, **kwargs)
+    return wrapper
+return decorator
+
+
+settings.py 
+LOGIN_URL = 'login'
+
+customer>views.py
+@outer_decorator_check_role('customer')
+def customer_view(request):
+    return render('request', 'customer/customer_dashboard.html')
+
+seller>views.py
+@outer_decorator_check_role('seller')
+def seller_view(request):
+    return render('request', 'seller/seller_dashboard.html')
 
 
 
-		
+
+ 
+
+
+
+	
+
+
+
+
+
+
+
+			
 
 
 
