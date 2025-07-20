@@ -1247,7 +1247,7 @@ def outer_argument_decorator(multiplier):
 
 ########
 
-# How to create Custom decorator to restrict role?
+- How to create Custom decorator to restrict role?
 
 core app> decorators.py 
 
@@ -1282,6 +1282,122 @@ seller>views.py
 @outer_decorator_check_role('seller')
 def seller_view(request):
     return render('request', 'seller/seller_dashboard.html')
+
+
+
+- How to set permissions to user programatically when user 
+registers?
+
+#When you use custom user model, userManager then the input fields 
+for groups and permissions are not visible in admin panel.
+
+To make these two fields visible on Admin panel we need to 
+override PermissionMixin in User class along with 
+AbstarctBaseUser class.
+	def User(AbstarctBaseUser, PermissionMixin):
+		..
+After migrations, migarte it creates two tables.
+#appname = account
+account_user_groups
+account_user_user_permissions
+
+To assign user groups and permissions we have certain methods
+- myuser.groups.set([group_list])
+- myuser.groups.add(group, group)
+- myuser.group.remove(group, group)
+- myuser.group.clear()
+- myuser.user_permissions.set([pemrission_list])
+- myuser.user_permissions.add(pemrmission1, permisson2)
+- myuser.user_permissions.remove(pemrmission1, permisson2)
+- myuser.user_permissions.clear()
+
+
+Whenever a model is created 4 permissions are formed for each new 
+model in auth_user_permissions table.
+modelname = product
+- view_product
+- add_product
+- change_product
+- delete_product
+
+How to assign this permssiions to user when, user register on 
+website? 
+#We have two types of user
+- customer
+- seller
+e.g.: customer must have only view product permsission
+seller must have view, add, change, delete product permissions
+
+core app> permission_config.py
+# Here we will map based on user role which permissions to 
+assign
+
+from product.models import Product
+
+PERMISSION_CONFIG = {
+	'customer': {
+		Product: ['view'], 
+		#order:[]
+		}, 
+	'seller': {
+		Product:['view', 'add', 'change'],
+		#order:[]
+		}
+	}
+
+
+core app> utils.py 
+# Here we will assign permissions based on user role 
+
+- Based on PERMISSION_CONFIG we get the model, permission dict
+- Then get the ContentType object using model, app name
+- Then get the Permissions using content_type object and 
+codename
+- Then assign this permission in auth_user_user_permissions table.
+
+from django.contrib.auth.models import Permission
+from django.contri.contenttypes.models import ContentType
+from core.permission_config import PERMISSION_CONFIG 
+ 
+def assign_permission(user, role):
+    role_permission = PERMISSION_CONFIG.get(role)
+    for model, permissions in role_permission.items():
+	content_type = ContentType.objects.get(
+			app_label = model._meta.app_label,
+			model = model._meta.model_name
+			)
+	for perm_codename in permissions:
+	    Permission.objects.get(
+		content_type = content_type,
+		codename = f'{perm_codename}_{model._meta.model_name}'
+		)
+	    user.user_permissions.add(permission)
+
+user_permissions - is a related_name in model 
+.add - can be applied to models with many to many fields
+
+
+account> views.py
+from core.utils import assign_permission
+
+def register_view(request):
+    if request.method == POST:
+	form = RegisterationForm(request.POST):
+	if form.is_valid():
+	    user = form.save(commit=False)
+	    user.set_password(form.cleaned_data['password'])
+	    user.is_active = Fale
+	    user.save()
+
+	    # create a input or option field for user in register
+	    form
+	    role = request.POST.get('role')
+	    assign_permission(role, user)
+
+	    return redirect('login')
+    else:
+	form = RegisterationForm()
+    return render(request, 'account/register.html', {'form':form})
 
 
 
