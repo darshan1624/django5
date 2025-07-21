@@ -1284,6 +1284,11 @@ def seller_view(request):
     return render('request', 'seller/seller_dashboard.html')
 
 
+Problem 3: How can we restrict user from performing diff
+actions. 
+e.g.: customer must have only access to view products.
+seller must have permissions to view, add, change product.
+# This can be done by appying permssion to users.
 
 - How to set permissions to user programatically when user 
 registers?
@@ -1398,6 +1403,117 @@ def register_view(request):
     else:
 	form = RegisterationForm()
     return render(request, 'account/register.html', {'form':form})
+
+
+- Now since permissions are assigned this will restrict customer to
+view only products. 
+- seller can perform view, add, change, delete actions.
+- This permissions are also used by admin panel.
+
+But To login to admin panel via username other that superuser
+user must be is_satff = True.
+Also, has_perm(self, perm), has_module_perm(self, app_label) must
+be set correctly.
+
+def has_perm(self, perm):
+    if self.is_superuser:
+	return True
+    return super().has_perm(self,perm)
+
+def has_module_perm(self, app_label):
+    if self.is_superuser:
+	return True
+    return super().has_module.perm(self, app_label)
+
+
+# Admin panel works with inbuilt code correctly. 
+- How to apply these permissions in views and templates?
+
+e.g.: Suppose we have product form to add products.
+list to display products.
+edit and delete buttons when you view indvidual product.
+
+Now, customer must only be allowed to add products.
+delete button must only be allowed to superuser i.e. admin.
+
+web page structure> 
+customer, seller dashboard will have two links to
+- add product 
+- list product 
+  
+product app> templates
+- add.html
+	# created a django form and used it in templates
+	# will accepts POST request just like previous register 
+	form
+- list.html
+	# list all the products in product table
+	products = Product.objects.all()
+	{% for product in products%}
+	    <li>
+		<a href={% url 'product_detail' product.pk %}>
+			{{product.name}}
+	    </li>
+	{% endfor %}
+- detail.html
+	# show all details like price, description along with name
+	# give buttons to delete and edit
+	# edit will take to add.html with prefilled details of 
+	object
+	# delete will take to delete.html
+- delete.html
+	# reconfirm like Are you sure you want to delete?
+	# give button to submit and delete. 
+
+
+
+- applying permissions in views
+product app>views.py
+from django.contrib.auth.decorators import permission_required
+
+@permission_required('product.add_product', raise_exception=True)
+def product_add(request):
+	..
+- similarliy, apply on product_list, product_view, product_delete 
+ functions.
+
+
+- applying permissions in templates
+# If customer then he must not have access to add products link.
+
+customer>templates>dahsboard.html (similar in seller dashboard)
+{% if perms.product.add_product %}
+    <li><a href="{% url 'product_add'%}"> Product Add</a><li>
+{% endif %}
+
+
+- product.add_product => app_name.permission
+
+context_processors:
+- perms, user, messages are all context provided by inbuilt fucntion
+in django called context_processors.
+
+We can directly access user varaible in templates. 
+diff contexts
+- user
+- perms
+- messages 
+   
+So, You can do 
+	{% if user.is_authenticated %}
+		{% if user.is_customer %}
+	          <li>
+              	   <a href="{% url 'customer_dashboard' %}" class="block py-2 px-3">Dashboard</a>
+           	  </li>
+		..
+
+
+
+
+
+
+
+
 
 
 

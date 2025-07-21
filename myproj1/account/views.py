@@ -2,6 +2,7 @@ from django.shortcuts import render, redirect
 from account.forms import RegisterationForm
 from account.models import User
 from django.contrib.auth import authenticate, login, logout
+from account.utils import assign_permissions 
 
 def home(request):
     return render(request, 'account/home.html')
@@ -54,17 +55,20 @@ def logout_view(request):
 
 def register_view(request):
     if request.method == 'POST':
-        print('Inside POST METOD')
-        print(request.POST)
         form =  RegisterationForm(request.POST)
         if form.is_valid():
-            print('INSIDE IS_VALID')
             user = form.save(commit=False)
             user.set_password(form.cleaned_data['password'])
             user.is_active = False
-            user.is_customer = True
+            role = request.POST.get('role')
+            print('roleeeeeeeeeeeee', role)
+            if role == 'seller':
+                user.is_seller = True
+            elif role == 'customer':
+                user.is_customer = True
             user.save()
-            redirect('login')
+            assign_permissions(user, role)
+            return redirect('login')
     else:
         form = RegisterationForm()
     return render(request, 'account/register.html', {'form':form})
