@@ -2,4 +2,18 @@
 {% block title %}Seller Dashboard{% endblock title %}
 {% block content %}
 <h1>Seller Dashboard</h1>
+
+<hr>
+<br><br><br>
+<ul>
+    {% if perms.product.view_product %}
+    <li><a href="{% url 'product_list' %}">Product List</a></li>
+    {% endif %}
+    <br><br>
+    {% if perms.product.add_product %}
+    <li><a href="{% url 'product_add' %}">Product Add</a></li>
+    {% endif %}
+    
+</ul>
+
 {% endblock content %}

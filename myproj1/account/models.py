@@ -41,7 +41,7 @@ class User(AbstractBaseUser, PermissionsMixin):
 
     objects = UserManager()
 
-    def has_perm(self, perm):
+    def has_perm(self, perm, obj=None):
         if  self.is_superuser:
             return True 
         return super().has_perm(perm)

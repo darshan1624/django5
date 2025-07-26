@@ -1171,7 +1171,7 @@ def decorator(num):
     def wrapper():
 	x = num()
 	return x*5
-    return new_num
+    return wrapper
 
 def num():          
     return 10
