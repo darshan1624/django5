@@ -1511,6 +1511,684 @@ So, You can do
 
 
 
+Cookies: 
+cookies are key value pairs sent by server to store on client machine.
+They are common way for client side storage.
+
+Reasons to use cookies:
+- Http requests are stateless. They doesnot remember anything between
+ the two requests. 
+- Cookies allows the client to send some data with every request. 
+ e.g. It can store tokens in JWT or session ids in session auth.
+- Non sensitive data can be stored like Theme(light/dark mode), 
+ language.
+
+Syntax to set cookie
+	HttpResponse.set_cookie(key, value='', max_age=None, 
+		expires=None, secure=True, httponly=True)
+
+	max_age - In secs (after this token gets expires)
+	expires - In datetime format
+	secure - cookie can only be set or get when request are https
+		and not http (on devlopement server keep False if 
+		using http)
+	httponly - cant access cookie on frontend only accesible on
+		server, prevents XSS(cross site scripting)
+
+# In google chrome cookie is present in 
+	application> cookies
+
+
+How to set cookie in views?
+def setcookie(request):
+    response = render(request, 'student/setcookie.html')
+    response.set_cookie('my_token', value='token12345', max_age=3600)
+    return response
+
+def getcookie(request):
+    my_token = request.COOKIES['token']
+    return render(request, 'sudent/getcookie.html', 
+		context={'token':my_token})
+
+def delcookie(request):
+    reponse = render(request, 'student/delcookie.html')
+    reponse.delete_cookie('my_token')
+    return reponse
+
+
+There is other method to make cookie data encryted.
+- reponse.set_signed_cookie('my_token', value='token123456', 
+				salt='tk')
+- reponse.get_signed_cookie('my_token', salt='tk')
+#Using salt key only you can see the value of token
+
+
+Drawback of cookies?
+- Data is stored directly on browser which is easy to modify via 
+ Dev tools.
+- data is readable if httponly= False
+
+
+Session vs cookie?
+session_id is stored in cookie but actual data is stored on server
+can store large data in server 
+cant modify or view data directly
+
+
+
+
+	
+Session:
+A session is a way to store user specific data on the server.
+It is linked to session key which is stored in cookies.
+django_session(session_key, session_data, expire_date)
+
+
+- Flow
+When you make a request sessionMiddleware checks if there is any 
+session id already present.
+If yes, load data in request.session. 
+
+django_session table will have a new session key if session data is 
+modified. 
+	request.session['fname'] = 'Amit' 
+
+The django creates a random session key.
+
+When the request is about to finish
+- Key is stored in django_session table with data in encryted format.
+- SECRET_KEY is used to encrypt which is mentioned in settings.py
+- Also, Underthehood same key is set in browser cookie.
+
+# For every browser, every webiste has one session_id.
+session_id is shared accross the tabs but not accross the browsers.
+
+
+What happens when user logout?
+django.contrib.auth import logout 
+
+def logoutUser(request):
+    logout(request)
+    return HttpResponse('Logout')
+
+- logout underthehood calls request.session.flush()
+- logout will delete all the session data for the user from server.
+- delete the session id from browser cookies.
+
+
+- create session
+def setsession(request):
+    request.session['fname'] = 'Amit'
+    request.session['lname'] = 'Pote'
+    return render(request, 'student/setsession.html') 
+
+- get session 
+def getsession(request):
+    fname = request.session['fname']
+    return render(request, 'student/getsession.html', {'fname':fname})
+
+- delete session
+    if 'fname' in request.session:
+	del request.session['fname']
+ # Even if u delete all keys from session the key, entry will remain
+ in django_session table with no data.
+
+- flush sesssion
+ request.session.flush()
+ This will remove all session_key, value from both django_session 
+ table and cookie.
+ This only works for session_key which is not expired.
+ Usually used when you logout.
+
+
+request.session is a dict type.
+You can perform below operations
+request.session.keys()
+request.session.items()
+request.session.setdefault('roll',20)
+
+#Below commands are executable in both view and template
+request.session.get_expiry_age()
+request.session.get_expiry_date()
+request.session.get_expire_at_browser_close()
+
+
+
+request.session.set_expiry(10) 
+- will expire in 10 secs
+- .set_expiry(0) will expire session key when browser is closed
+- after session is expired it doesnt flush entry from django_session
+and cookie. But the data(fname,lname) is deleted.
+
+request.session.clear_expired()
+- This will remove the expired session key.
+- flush will not remove expired session key.
+
+
+- Expiry time for session can also be set from settings.py
+	SESSION_COOKIE_AGE = 400    #In secs
+
+
+
+Why to use session?
+- Allows django to remember whether user is logged in or not.
+How? 
+When user is logged in using username, password.
+login(request, user) 
+It internally creates session with key '_auth_user_id'
+	request.session['_auth_user_id'] = str(user.id)
+Now, when you make another request.
+SessionMiddleWare gets session key from cookies and loads session 
+data in request.session. 
+Next, AuthenticationMiddleWare checks if _auth_user_id exists. 
+If it does, it sets request.user = modelobject of that user.
+It also, sets request.user.is_autheticated = True
+
+- Can store cart Items for anonomous user.
+- Data cant be modified easily by any user like in case of cookie.
+- Can store complex data on server. No size limit like in case of
+cookies 4kb.
+- Data is encryted using SECRET_KEY.
+
+
+Drawbacks of sessions?
+- Session data is temporary.
+- requires regualar cleanup request.session.clear_expired or cronjob.
+- session key can be stolen if cookie is not secure, and 
+	httponly=False.
+- If the same user logs in from another browser the session key is
+ different.
+
+
+
+
+
+
+Caching:
+- temporary storage for images, webpages (web multimedia), data(list,
+ dict, modelobject)
+- makes webpages load faster 
+- cost effective as it will consume less server resources
+
+Three ways to implement caching
+- Per Site caching 
+- Per View caching 
+- Template fragment caching 
+- Low level caching
+
+Cache data can be stored in 
+- db 
+- file based cahing
+- local memory cahing 
+- redis 
+
+
+- Per Site caching
+This will cache entire website.
+In settings.py we need to define middlewares. Also, need to define
+cache storage location and validity time.
+MIDDLEWARE = [
+	'django.middleware.cache.UpdateCacheMiddleware',
+	'django.middleware.cache.FetchFromCacheMiddleware'
+	..
+]
+
+# db caching
+CACHES = {
+	'default':{
+	  'BACKEND':'django.core.cache.backends.db.DatabaseCache',
+	  'LOCATION':'student_cache',
+	}
+}
+
+CACHE_MIDDLEWARE_SECONDS = 30 #valid for 30 secs
+
+# After these settings in settings.py you need to run below command.
+	python manage.py createcachetable
+# it will create student_cache table to store cache data.
+student_cache(cache_key, value, expires)
+
+How exactly persite cahing works?
+When user makes a request to any endpoint.
+FetchFromCacheMiddleware checks if the student_cache table has unique
+cache key. If yes skip views logic and return the value corrsponding 
+cache key in response.
+If cachekey not present excute views.
+Once view is excuted UpdateCacheMiddleware created a unique cache key
+in student_cache table.
+
+Caching only works for GET request endpoints.
+Every endpoint would have differn cache key.
+Cache key is formed using urls in urls.py.
+
+# file based caching 
+CACHES = {
+  'default':{
+    'BACKEND':'django.core.cache.backends.filebased.FileBasedCache ',
+    'LOCATION':'student_cache',
+    }
+}
+
+# here location student_cache is folder which will hace cache files
+# present inside root directory.
+
+
+# local memory caching
+CACHES = {
+  'default':{
+    'BACKEND':'django.core.cache.backends.locmem.LocMemCache ',
+    'LOCATION':'student_cache',
+    }
+}
+
+
+
+- Per View caching
+This creates a cache for views.
+Which view to cache is specified using decorators.
+You can tell which view to be cached from views or from urls.
+
+We use cache_page decorator to implement cache.
+
+In views.py 
+from django.views.decorators.cache import cache_page
+
+@cache_page(40)
+def course(request):
+	return render(request, 'student/course.html')
+
+# 40 is validty time for cache after which it will expire
+
+In urls.py
+from django.views.decorators.cache import cache
+
+path('course/', cache_page(40)(views.course), name='course')
+
+# for dynamic urls it will create mutiple cache key.
+path('course/<int:id>') for every id its a new cache key.
+
+settings.py 
+Need to metion same settings as in Per Site caching 
+without middlware.
+Can use similarly db, filebased, local memory for storing cache.
+
+
+
+- template fragement caching
+This caching is used when we want to load specific part of template
+to be cached and load faster.
+
+course.html 
+{% load cahe %}
+<h1> Course 1 </h1>
+<h2> Course 2 </h1>
+
+{% cache 40 mycourse %}
+	<h1> Course 3 </h1>
+	<h2> Course 4 </h1>
+{% endcache mycourse %}
+
+settings.py 
+settings remain same as in per site cahing.
+
+
+
+- Low Level Caching
+When you dont want to chache entire webiste, view we use low level 
+cahing. This can be use to cache particlar list, dict, modelobject.
+
+We use cache library to form cache.
+
+Common used function to perform Low level caching:
+
+cache.set(key, value, timeout=20, verison=None)
+- set will store the key in cache
+- key is specifies the variable name in cache 
+- value is the value that key varaible has
+- timeout will delete cache
+- a single key can have multiple versions meaning single key can have
+mutiple values
+
+cache.get(key, default=None, version=None)
+- Will get the value in the key else set to None
+
+cache.add(key, value, timeout=20, version=None)
+- If key doesnt exist it will create new key
+
+cache.set_many(dict, timeout)
+- can pass mutiple key value pairs in dict
+
+cache.get_many(keys, version=None)
+- get dict
+
+cache.delete(key, version=None) 
+cache.delete_many(keys, verision=None)
+
+cache.clear()
+
+
+In views.py
+from django.core. cache import cache
+
+def course(request):
+	mv = cache.get('movie', 'has_expired')
+	if mv=='has_expired':
+		cache.set('movie', 'Harry Potter', 60)
+		mv = cache.get('moview')
+	return render(request, 'student/course.html',{'mv':mv})
+
+
+
+
+
+
+Signals: 
+Signals are like notifications sytem.
+Where sender sends out a signal when some action occurs like saving 
+or deleting model object or User logged in. 
+The receiver listens to that signal and runs some code in response. 
+
+When to use signals?
+- Can delete cache when new modeobject is saved, updated or deleted.
+- Suppose we are using built in User model and not custome user 
+model. In that case if we need extra fileds like address, dob
+then we need to maintain another model Profile.
+But whenver a entry is added in User I want to have same user entry
+in Profile model.
+For this we can use signals, whenever .save() is used for User
+post save the enrty will get inserted in Profile. 
+E.g. entry gets created from admin panel. 
+
+- Sending confirmation email after registeration.
+- Logging User Login, Logout
+
+
+
+How to create signal receiving functions(receivers)?
+
+blog app> signals.py
+from django.contrib.auth.models import User
+from django.cotnrib.auth.signals import user_logged_in, 
+	user_logged_out, user_login_failed
+from django.dispatch import receiver 
+
+@receiver(user_logged_in, sender=User)
+def loggin_success(sender, request, user, **kwrags):
+    print('Logged In')
+    print(sender) ==> User Model
+    print(request) ==> Http request 
+    print(user)    ==> user model object
+    print(kwargs) ==> contains signal key 
+
+# sender, **kwargs are important arguments 
+# decorator @receiver is must to tell signal that this function is
+to be executed.
+
+In apps.py
+class BlogConfig(AppConfig):
+	default_auto = .. 
+	name = blog
+
+	# Above class is by default provided by django
+	def ready(self):
+		import blog.signals
+
+In __init__.py
+dafautl_app_config = 'blog.apps.BlogConfig'
+
+
+Flow:
+When user login via admin panel loggin_success fucntion gets 
+executed. 
+
+
+# Action on logout user
+
+@receiver(user_logged_out, sender=User)
+def log_out(sender, request, user, **kwargs)":
+	..
+
+@receiver(user_login_failed)
+def login_failed(sender, credentials, request, **kwargs):
+    ..
+
+
+Useful signals for models 
+from django.db.models.signals import
+- pre_init  # triggered when model initiate 
+- pre_save  # when new user created or user is updated
+- pre_delete
+- post_init
+- post_save
+- post_delete
+- pre_migrate # before migrate 
+- post_migrate # after migrate 
+
+
+Useful signals for Http Resquest
+- from django.core.signals import request_started, 
+	request_finished, got_request_exception
+
+Useful signal when db connecttion create, which is when runserver
+is executed
+- from django.db.backends.signals import connection_created
+
+
+How to create custom signals?
+In signals.py
+from django.dispatch import Signal, receiver 
+
+notification = Signal() 
+
+@receiver(notification)
+def show_notification(sender, **kwargs):
+    print(sender)
+    print(kwargs)
+    ..
+
+In views.py
+from blog.signals import notification
+def course(request):
+	notifiaction.send(sender=None, request=request)
+	return HttpReponse('course python')
+
+
+Benifit of using custom signal?
+- one signal from course function can call mutiple receivers.
+ We can more receivers like show_notification.
+
+
+
+
+
+
+
+Middleware:
+Middleware is a layer between the request and view, or between 
+view and reponse. 
+Where you can modify requests and reponses gloabally before they
+reach the view or leave it.
+
+
+How to create custom Middleware?
+
+views.py
+def course(request):
+	print('This is inside View')
+	return HttpReponse('course')
+
+Middleware can be created in two ways
+- Fucntion based middleware 
+- Class based middleware 
+
+- Function based Middleware
+# work similar like decorator
+blog app> middlewares.py 
+
+def my_fun_middleware(get_reponse):
+    print('One Time Intilisation')
+
+    def my_func(request):
+        print('This is before View')
+	reponse = get_reponse(request)
+	print('This is after View')    	
+        return response	
+
+    return my_func 
+
+In settings.py
+MIDDLEWARES = [	
+	..
+	'blog.middlewares.my_fun_middleware',
+]
+
+
+# get_reponse argument will have a view function wrppaer in it 
+if only one middleware is there.
+If multiple middleware exists then Middleware 1 will have 
+middleware 2 as a argument in get_reponse.
+
+Output ==> 
+	One Time Intilisation
+	This is before View
+	This is inside View
+	This is after View
+
+- we can avoid view from getting executed if needed in 
+middleare by returning reponse inside
+
+    def my_func(request):
+        print('This is befoe View')
+	reponse = HttpReponse('Reponse from middleware')
+	print('This is after view')    	
+        return response	
+
+
+Flow
+- Whenever a request is made to any endpoint. The middleware
+gets executed.
+
+
+- Class Based Middlware
+
+class MYCMiddleware:
+    def __init__(self, get_reponse):
+	self.get_reponse = get_reponse
+	print('One time intilaisation')
+
+    def __call__(self, request):
+	print('This is before View')
+	reponse = self.get_reponse(reuquest)
+	print('This is after View')
+	return response 
+
+- Within _call__ you can handle exception caught usign try, 
+except
+- You can mofify reponse got from view
+
+
+Multiple Middelwares:
+- If created mutiple middlewares like 
+MIDDLEWARES = [
+	..
+	'blog.middlewares.MyMiddleWare1',
+	'blog.middlewares.MyMiddleWare2',
+	'blog.middlewares.MyMiddleWare3',
+]
+
+- so according to priority middleware1 wraps 2, 2 wraps 3.
+
+Output ==> #123-View-321
+	One Time Intilisation M1
+	One Time Intilisation M2
+	One Time Intilisation M3
+	
+	This is before View1
+	This is before View2
+	This is before View3
+	
+	This is inside View func
+
+	This is after View3
+	This is after View2
+	This is after View1
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
