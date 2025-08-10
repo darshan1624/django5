@@ -2515,6 +2515,12 @@ Helper method vs Custom Manager Method?
 
 
 
+Model Relationship:
+- One to One 
+- one to Many 
+- Many to Manay
+
+
 
 
 
