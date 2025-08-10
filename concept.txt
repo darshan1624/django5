@@ -1868,7 +1868,7 @@ cache.clear()
 
 
 In views.py
-from django.core. cache import cache
+from django.core.cache import cache
 
 def course(request):
 	mv = cache.get('movie', 'has_expired')
@@ -2113,6 +2113,404 @@ Output ==> #123-View-321
 	This is after View2
 	This is after View1
 
+# See code for how to show construction Page using middleware, how to give 
+access to specific few users and also use session to remember access to 
+few users.
+
+
+
+
+Queryset:
+A Queryset is a list of objects that contains the results of 
+database query , built using django ORM methods.
+
+Student(name, roll, city, marks, pass_date)
+Teacher(name, empnum, city, salary, join_date)
+
+Student.objects.all()
+Student.objects.filter(city='delhi')
+Student.objects.exclude(city='delhi')
+
+Student.objects.order_by('marks') # ascending IntegerField
+Student.objects.order_by('-marks') # descending
+Student.objects.oreder_by('-name') # descending 
+Student.objects.order_by('name').reverse() # descending
+Student.objects.order_by('?') # Shuffle order
+
+Student.objects.order_by('name')[0:5] # first 5 objects
+
+
+data = Student.object.all()
+print(data.query) # Gives raw sql query
+
+
+Student.objects.values() # Instead of objects in list, it gives all 
+			data column:value in dict format 
+Student.objects.values('name', 'city') # gives only name, city for all
+			rows
+
+Student.objects.value_list() # Gives all data in tuple no column name
+Student.objects.value_list('id', 'name') # [(1, amit), (2, anket)]
+Student.objects.value_list('id', 'name', named=True) 
+				# will give all data in tuple but
+				with column named (id=1, name='amit')
+
+
+qs1= Student.objects.values_list('id', 'name', named=True)
+qs2= Student.objects.values_list('id', 'name', named=True)
+all_data = qs2.union(qs1) # No duplicate records
+			  # interchanging qs1, qs2 results same
+
+
+all_data = qs2.intersection(qs1) # gives common records
+			# interchanging qs1, qs2 results same
+
+all_data = qs1.difference(qs2) #only elements in qs1, not even common
+			   # interchanging qs1, qs2 results same
+
+And (&) condition: 
+all_data = Student.objects.filter(name='rohit') & Student.objects.
+						filter(city='delhi')
+		# will give rows that have both rohit and ranchi
+all_data = Student.objects.filter(name='rohit', city='delhi')
+
+Or (|) condition:
+all_data = Student.objects.filter(name='rohit') | Student.objects.
+						filter(city='delhi')			   
+
+
+
+
+Query that returns Single model Instance
+student_data = Student.objects.get(id=2)
+		# will throw error if id=2 doesnot exist
+		# will throw error if muiple entries with id=2 
+student_data= Student.objects.first() #gives first entry id =1 
+student_data= Student.objects.order_by('name').first()
+					# starting with A name
+student_data= Student.objects.last()
+
+Student.objects.latest('pass_date') #gives one entry with latest date
+			# if many entries with same date then any one
+Student.objects.latest('pass_date', id) # latest and from mutiple
+				# order_by id 
+Student.objects.earliest('pass_date') #oldest date 
+
+
+student_data = Student.objects.all()
+print(student_data.exists()) # returns True if atleast one object
+				exists
+
+
+
+How to peform operations on db table?
+Student(name, roll, city, marks, pass_date)
+
+student_data = Student.objects.create(name='Amit', roll='101', 
+	city='mumbai', marks='200', pass_date = '2025-08-04')
+		# .create returns the model object 
+
+student_data, created = Student.objects.get_or_create( roll=101
+	defaults = {name:'Amit', city:'mumbai', mark:'200', 
+ 	pass_date : '2025-08-04'})
+		# .get_or_create returns the model object if 
+		already exist or create it
+		# created will be True if created
+
+student_data = Student.object.filter(id=1).update(name='Anket',
+		marks='100')
+student_data = Student.objects.filter(marks=100).update(
+		city='mumbai')	# This will update every student
+				city whose marks are 100 
+
+student_data, created = Student.objects.update_or_create( id=10,
+	name='Anisha', deafults = {'name':'Yash', 'roll':100, 
+	'marks':200, 'pass_date':'2025-08-04'})
+			# it checks if id=10 and Anisha exists 
+			if yes it will be updated by default or 
+			new entry will be created presnt in 
+			default.
+
+objs = [
+Student(name:'Yash', roll:100, city='mumbai', marks=100, 
+	pass_date = 2025-08-24),	
+Student(name:Amit, roll:101, city='mumbai', marks=150, 
+	pass_date = 2025-08-20),
+Student(name:Oliva, roll:102, city='delhi', marks=120, 
+	pass_date = 2025-08-24),
+]
+student.objects.bulk_create(objs)
+		# This will bulk insert multiple model objects 
+
+
+all_student_data = Student.objects.all()
+for stu in all_student_data:
+	if stu.marks > 100:
+		stu.city = 'Mumbai'
+student_data = Student.objects.bulk_update(all_student_data, 
+		['city'])
+		# ['city'] speciies to only update city column
+
+
+
+
+What if one of the model object being updated in all_student_data
+doesnot exist?
+e.g.: 
+objs = [
+Student(id = 1, 'name':'Yash', 'roll':100),	
+Student(id= 2, name':'Amit', 'roll':101),
+Student(id=3, 'name':'Oliva', 'roll':102),
+]
+	# id in every object is mandatory when updating
+	# else will throw Value error
+	# usually wont create objects manually for update
+	# u first get objects from existing data then update
+
+student.objects.bulk_update(objs, ['name','roll'])
+
+# suppose id =2 doesnot exist in db 
+# Then it will skip that row and wont refelct any thing in db.
+# No error will be raised
+
+
+student_data = Student.objects.in_bulk([1,2,100])
+		# will get the model object of both id 1,5 
+		# results dict {1: object, 5: object}
+		# .in_bulk([]) ==> no objects 
+		# .in_bulk() ==> all objects 
+		# if id doesnt exist will not give error 
+print(student_data[5].name) ==> 'Kartika'
+
+
+student_data = Student.objects.get(id=2).delete()
+student_data = Sudent.objects.filter(marks=60).delete()
+		# will bulk delete all students with marks=60
+student_data = Student.objects.all().delete()
+		# deletes all 
+
+student_data = Student.objects.all()
+print(student_data.count()) # Will get you the count of objects
+
+
+
+Lookups
+Student(name, roll, city, marks, pass_date, admission_date )
+
+student_data = Student.objects.filter(name__exact='Sonam')
+student_data = Student.objects.filter(name__iexact='Sonam')
+	     #iexact is case insensitive, gives both sonam, Sonam
+student.objects.filter(name__contains = 'sh')
+		      (name__icontains = 'sh')
+student.objects.filter(id__in = [1,2]) 
+			# give object1, 2 if present
+student.objects.filter(marks__gt = 100)
+		      (marks__gte = 100)
+		      (marks__lt = 100)
+		      (marks__lte = 100)
+student.objects.filter(name__startswith = 'S')
+		      (name__istartswith = 'S')
+		      (name__endswith = 't')
+		      (name__iendswith = 't')
+
+# pass_date = models.DateField()
+# admission_date = models.DateTimeField()
+
+student.objects.filter(
+	pass_date__range=('2023-01-01', '2024-12-24'))
+		# will give records between this dates 
+student.objects.filter(admission_date__date = date(2023-01-20))
+		      (admission_date__date_gt = date(2023-01-20))
+		      (pass_date__year_gt=2023)
+		      (pass_date__month=1)
+		      (pass_date__day=4)
+		      (pass_date__quarter=1)
+student.objects.filter(roll__isnull=False)
+
+
+Aggregate Functions:
+from django.db.models import Avg, Sum, Min, Max, Count 
+
+student_data = Student.objects.all()
+student_data.aggregate(Avg('marks'))
+student_data.aggregate(Sum('marks'))
+student_data.aggregate(Min('marks'))
+student_data.aggregate(Max('marks'))
+student_data.aggregate(Count('marks'))
+
+
+Q:
+from django.db.models import Q
+
+student_data = Student.objects.filter(Q(id=2) & Q(roll=102)) 
+student_data = Student.objects.filter(Q(id=2) | Q(roll=102))
+student_data = Student.objects.filter(~Q(id=2))
+student_data = Student.objects.filter(Q(city='mumbai') 
+			& Q(marks__gte=200))
+
+
+Limit objects in queryset:
+student_data = Student.objects.all()[:5]
+
+
+Model Inheritance:
+- Abstract Model
+- Multi Table 
+- Proxy Table
+
+
+Abstarct Model
+When we have common fields in two or more models we can can 
+include common filelds in single Base model.
+Then inherit the Base model in other models.
+- abstract = True
+- No db table will be created for abstarct model
+- child class will inherit abstract class fields and methods 
+- Not possible to intilaize values directly
+
+Suppose we have to create three models.
+Student(name,age,fees)
+Teacher(name,age,salary,join_date)
+Constructor(name,age,payment,join_date)
+
+# We can name,age,join_date is repeated in two or more models.
+# Such common fields can be avoided by using Abstract Base Model.
+
+How to create Abstract Base Model?
+from django.db import models
+
+class AbstractBaseModel(models.Model):
+    name = models.CharField(max_length=255)
+    age = models.IntegerField()
+    join_date = models.DateField()
+
+    class Meta:
+	abstract = True
+
+class Student(AbstractBaseModel):
+    fees = models.IntegerField()
+    join_date = None  #Fields not required can be set to None
+
+class Teacher(AbstarctBaseModel):
+    salary = models.IntegerField()
+    
+class Constructor(AbstarctBaseModel):
+    payment = models.IntegerField()
+    join_date = models.DateTimeField #if required custom or
+				     diff override the filed
+
+
+
+Multi Table Inheritance
+When you want Base model table to be create with along with child
+class model. 
+There is one to one relationship between base model and child
+class. 
+Any entry deleted from child class will get deleted from 
+ExamCenter as well but not vice versa. 
+If tried to delete from Base Model and relation ship exist in
+child class it will throw error.
+
+Suppose you have to create two models with common fields.
+ExamCenter(center_name, center_city)
+Student(name, roll, center_name, center_city)
+
+How to create Muti Table Inheritance?
+class ExamCenter(models.Model):
+    center_name = models.CharField(max_length=255)
+    center_city = models.CharField(max_length=255)
+
+class Student(ExamCenter):
+    name = models.CharField(max_length=255)
+    roll = models.IntegerField()
+
+- Both models ExamCenter, Student will be created. Student will 
+have ExamCenter fields as well.
+
+
+Proxy Model:
+When you want to change the behaviour of the existing model, then
+we use the proxy model.
+With proxy model we have two models, but table in db remains only
+one which is original.
+In proxy model you cannot create new field.
+
+How to create Proxy model?
+class Product(models.Model):	
+    name = models.CharField(max_length=100)
+    price = models.IntegerField()
+    stock = models.IntegerField()
+
+class ProxyProduct(Product):
+    class Meta:
+	proxy = True 
+
+
+Why to use proxy model?
+- Add helper methods 
+
+class ProxyProduct(Product):
+    class Meta:
+	proxy = True
+
+    def full_stock(self): #Helper Method
+	return self.stock >= 100
+
+product_data = ProxyProduct.objects.get(id=2)
+product_data.full_stock() ==> returns True or False
+
+- change default manager or queryset
+- chnage display fields, ordering in admin panel
+
+
+
+Model manger:
+Model Manager acts as a interface bwteeen model and orm query. 
+Every model has on default manager inbuilt.
+By default its 
+	objects = models.Manager()
+# That is how we can access Student.objects.all().
+# Student table has objects property(attribute).
+
+Why to create custom Model manager? 
+- Modify queryset result
+- Add extra custom manager method
+
+How to create custom Model Manager?
+from django.db import models
+
+class CustomStudentManager(models.Manager):
+    def get_queryset(self):
+	# By default manager order_by id but now it will be name
+	return super().get_queryset().order_by('name')
+	
+
+class Student(models.Model):
+    name = models.CharField(max_length=255)
+    age = models.IntegerField()
+    join_date = models.DateField()
+    fees = models.IntegerField()
+
+    # objects = models.Manager() #By default inbuilt manager 
+    objects = CustomStudentManager()
+
+# modified .get_queryset()
+
+
+How to create custom manager Method?
+class CustomStudentManager(models.Manager):
+    def get_stu_roll_range(self, r1, r2):
+	return super().get_queryset().filter(roll__range=(r1,r2))
+
+
+student_data = Student.objects.get_stu_roll_range(101,120) 
+
+
+Helper method vs Custom Manager Method?
+- Helper methods are used when you have model object already.
+- unlike Model Manager Method were you get entire query.
+- Use helper methods to add logic for a single instance
+- Use manager methods to filter/query sets of objects from the DB
 
 
 
@@ -2150,6 +2548,7 @@ Output ==> #123-View-321
 
 
 
+				
 
 
 
@@ -2162,8 +2561,6 @@ Output ==> #123-View-321
 
 
 
-
- 
 
 
 
